@@ -1,9 +1,8 @@
-version: "3.9"
-
 services:
 
   configserver:
-    image: your-registry/configserver:latest
+    build:
+      context: ./configserver
     container_name: configserver
     ports:
       - "8071:8071"
@@ -16,7 +15,8 @@ services:
       retries: 5
 
   eurekaserver:
-    image: your-registry/eurekaserver:latest
+    build:
+      context: ./eurekaserver
     container_name: eurekaserver
     ports:
       - "8761:8761"
@@ -28,7 +28,8 @@ services:
         condition: service_healthy
 
   gatewayserver:
-    image: your-registry/gatewayserver:latest
+    build:
+      context: ./gatewayserver
     container_name: gatewayserver
     ports:
       - "8072:8072"
@@ -42,7 +43,8 @@ services:
         condition: service_healthy
 
   accounts:
-    image: your-registry/accounts:latest
+    build:
+      context: ./accounts
     container_name: accounts
     ports:
       - "8080:8080"
@@ -56,7 +58,8 @@ services:
         condition: service_healthy
 
   loans:
-    image: your-registry/loans:latest
+    build:
+      context: ./loans
     container_name: loans
     ports:
       - "8090:8090"
@@ -70,7 +73,8 @@ services:
         condition: service_healthy
 
   cards:
-    image: your-registry/cards:latest
+    build:
+      context: ./cards
     container_name: cards
     ports:
       - "9000:9000"
