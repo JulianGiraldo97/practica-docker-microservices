@@ -3,70 +3,82 @@ version: "3.9"
 services:
 
   configserver:
-    build: ./configserver
+    image: your-registry/configserver:latest
     container_name: configserver
     ports:
       - "8071:8071"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8071/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   eurekaserver:
-    build: ./eurekaserver
+    image: your-registry/eurekaserver:latest
     container_name: eurekaserver
     ports:
-      - "8070:8070"
+      - "8761:8761"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
     depends_on:
-      - configserver
-
-  accounts:
-    build: ./accounts
-    container_name: accounts
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
-    depends_on:
-      - configserver
-      - eurekaserver
-
-  loans:
-    build: ./loans
-    container_name: loans
-    ports:
-      - "8090:8090"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
-    depends_on:
-      - configserver
-      - eurekaserver
-
-  cards:
-    build: ./cards
-    container_name: cards
-    ports:
-      - "9000:9000"
-    environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
-    depends_on:
-      - configserver
-      - eurekaserver
+      configserver:
+        condition: service_healthy
 
   gatewayserver:
-    build: ./gatewayserver
+    image: your-registry/gatewayserver:latest
     container_name: gatewayserver
     ports:
       - "8072:8072"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
     depends_on:
-      - configserver
-      - eurekaserver
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+
+  accounts:
+    image: your-registry/accounts:latest
+    container_name: accounts
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+
+  loans:
+    image: your-registry/loans:latest
+    container_name: loans
+    ports:
+      - "8090:8090"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+
+  cards:
+    image: your-registry/cards:latest
+    container_name: cards
+    ports:
+      - "9000:9000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
