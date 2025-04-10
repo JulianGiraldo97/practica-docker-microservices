@@ -8,8 +8,6 @@ services:
       - "8071:8071"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-    networks:
-      - microservices-network
 
   eurekaserver:
     build:
@@ -22,8 +20,6 @@ services:
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
     depends_on:
       - configserver
-    networks:
-      - microservices-network
 
   gatewayserver:
     build:
@@ -38,8 +34,6 @@ services:
     depends_on:
       - configserver
       - eurekaserver
-    networks:
-      - microservices-network
 
   accounts:
     build:
@@ -54,8 +48,6 @@ services:
     depends_on:
       - configserver
       - eurekaserver
-    networks:
-      - microservices-network
 
   loans:
     build:
@@ -70,8 +62,6 @@ services:
     depends_on:
       - configserver
       - eurekaserver
-    networks:
-      - microservices-network
 
   cards:
     build:
@@ -86,9 +76,3 @@ services:
     depends_on:
       - configserver
       - eurekaserver
-    networks:
-      - microservices-network
-
-networks:
-  microservices-network:
-    driver: bridge
