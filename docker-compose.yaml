@@ -8,24 +8,18 @@ services:
       - "8071:8071"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8071/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   eurekaserver:
     build:
       context: ./eurekaserver
     container_name: eurekaserver
     ports:
-      - "8761:8761"
+      - "8070:8070"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
     depends_on:
-      configserver:
-        condition: service_healthy
+      - configserver
 
   gatewayserver:
     build:
@@ -36,11 +30,10 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
     depends_on:
-      configserver:
-        condition: service_healthy
-      eurekaserver:
-        condition: service_healthy
+      - configserver
+      - eurekaserver
 
   accounts:
     build:
@@ -51,11 +44,10 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
     depends_on:
-      configserver:
-        condition: service_healthy
-      eurekaserver:
-        condition: service_healthy
+      - configserver
+      - eurekaserver
 
   loans:
     build:
@@ -66,11 +58,10 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
     depends_on:
-      configserver:
-        condition: service_healthy
-      eurekaserver:
-        condition: service_healthy
+      - configserver
+      - eurekaserver
 
   cards:
     build:
@@ -81,8 +72,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eurekaserver:8070/eureka/
     depends_on:
-      configserver:
-        condition: service_healthy
-      eurekaserver:
-        condition: service_healthy
+      - configserver
+      - eurekaserver
