@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: microservicios-config
+data:
+  SPRING_PROFILES_ACTIVE: dev
+  SPRING_CONFIG_IMPORT: configserver:http://configserver:8071/
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
