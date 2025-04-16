@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: configserver
-          image: jbelzeboss97/app-microservicios-configserver
+          image: jbelzeboss97/configserver:latest
           ports:
             - containerPort: 8071
           env:

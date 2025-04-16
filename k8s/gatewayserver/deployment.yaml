@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: gatewayserver
-          image: jbelzeboss97/app-microservicios-gatewayserver
+          image: jbelzeboss97/gatewayserver:latest
           ports:
             - containerPort: 8072
           env:

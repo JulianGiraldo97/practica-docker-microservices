@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: cards
-          image: jbelzeboss97/app-microservicios-cards
+          image: jbelzeboss97/cards-service:latest
           ports:
             - containerPort: 9000
           env:

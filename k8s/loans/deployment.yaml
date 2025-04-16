@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: loans
-          image: jbelzeboss97/app-microservicios-loans
+          image: jbelzeboss97/loans-service:latest 
           ports:
             - containerPort: 8090
           env:

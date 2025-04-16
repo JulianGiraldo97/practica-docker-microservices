@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: eurekaserver
-          image: jbelzeboss97/app-microservicios-eurekaserver
+          image: jbelzeboss97/eurekaserver:latest
           ports:
             - containerPort: 8070
           env:
