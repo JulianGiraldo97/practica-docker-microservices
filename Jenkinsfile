@@ -14,6 +14,15 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                // Añadir permisos de ejecución a todos los scripts mvnw
+                sh '''
+                    chmod +x configserver/mvnw
+                    chmod +x eurekaserver/mvnw
+                    chmod +x gatewayserver/mvnw
+                    chmod +x accounts/mvnw
+                    chmod +x cards/mvnw
+                    chmod +x loans/mvnw
+                '''
             }   
         }
         
