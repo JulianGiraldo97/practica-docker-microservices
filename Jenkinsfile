@@ -14,15 +14,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                // Añadir permisos de ejecución a todos los scripts mvnw
-                sh '''
-                    chmod +x configserver/mvnw
-                    chmod +x eurekaserver/mvnw
-                    chmod +x gatewayserver/mvnw
-                    chmod +x accounts/mvnw
-                    chmod +x cards/mvnw
-                    chmod +x loans/mvnw
-                '''
             }   
         }
         
@@ -31,42 +22,42 @@ pipeline {
                 stage('Build Config Server') {
                     steps {
                         dir('configserver') {
-                            sh './mvnw clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('Build Eureka Server') {
                     steps {
                         dir('eurekaserver') {
-                            sh './mvnw clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('Build Gateway Server') {
                     steps {
                         dir('gatewayserver') {
-                            sh './mvnw clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('Build Accounts') {
                     steps {
                         dir('accounts') {
-                            sh './mvnw clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('Build Cards') {
                     steps {
                         dir('cards') {
-                            sh './mvnw clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
                 stage('Build Loans') {
                     steps {
                         dir('loans') {
-                            sh './mvnw clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
