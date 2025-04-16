@@ -4,9 +4,9 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub')
         GCP_CREDENTIALS = credentials('gcp-credentials')
-        PROJECT_ID = 'your-gcp-project-id'
-        CLUSTER_NAME = 'your-cluster-name'
-        LOCATION = 'your-cluster-location'
+        PROJECT_ID = 'devopsuq'
+        CLUSTER_NAME = 'microservicios-cluster'
+        LOCATION = 'us-central1-a'
         DOCKER_IMAGE_VERSION = "v${BUILD_NUMBER}"
     }
     
@@ -14,7 +14,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-            }
+            }   
         }
         
         stage('Build Microservices') {
