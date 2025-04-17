@@ -2,58 +2,59 @@ pipeline {
     agent any
 
     environment {
-        GCP_CREDENTIALS = credentials('gcp-credentials')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
         PROJECT_ID = 'devopsuq'
         CLUSTER_NAME = 'microservicios-cluster'
         LOCATION = 'us-central1-a'
         DOCKER_IMAGE_VERSION = "v${BUILD_NUMBER}"
+        DOCKER_BUILDKIT = '1'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-            }   
+            }
         }
 
         stage('Build Microservices') {
             parallel {
-                stage('Build Config Server') {
+                stage('Config Server') {
                     steps {
                         dir('configserver') {
                             sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
-                stage('Build Eureka Server') {
+                stage('Eureka Server') {
                     steps {
                         dir('eurekaserver') {
                             sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
-                stage('Build Gateway Server') {
+                stage('Gateway Server') {
                     steps {
                         dir('gatewayserver') {
                             sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
-                stage('Build Accounts') {
+                stage('Accounts') {
                     steps {
                         dir('accounts') {
                             sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
-                stage('Build Cards') {
+                stage('Cards') {
                     steps {
                         dir('cards') {
                             sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
-                stage('Build Loans') {
+                stage('Loans') {
                     steps {
                         dir('loans') {
                             sh 'mvn clean package -DskipTests'
@@ -65,21 +66,44 @@ pipeline {
 
         stage('Build and Push Docker Images') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    script {
-                        // Login to DockerHub
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
 
-                        // Build and push each service
-                        def services = ['configserver', 'eurekaserver', 'gatewayserver', 'accounts', 'cards', 'loans']
-                        services.each { service ->
-                            dir(service) {
-                                sh """
-                                    docker build -t $DOCKER_USER/${service}:${DOCKER_IMAGE_VERSION} .
-                                    docker push $DOCKER_USER/${service}:${DOCKER_IMAGE_VERSION}
-                                """
-                            }
+                        def services = [
+                            'configserver': 'configserver',
+                            'eurekaserver': 'eurekaserver',
+                            'gatewayserver': 'gatewayserver',
+                            'accounts': 'accounts-service',
+                            'cards': 'cards-service',
+                            'loans': 'loans-service'
+                        ]
+
+                        parallel services.collectEntries { dirName, dockerName ->
+                            ["${dirName}" : {
+                                dir(dirName) {
+                                    def imageName = "juliangiraldo97/${dockerName}:${DOCKER_IMAGE_VERSION}"
+
+                                    sh """
+                                        echo ">> Building image ${imageName}"
+                                        docker build -t ${imageName} .
+                                    """
+
+                                    def exists = sh(
+                                        script: "curl --silent -f -lSL https://hub.docker.com/v2/repositories/juliangiraldo97/${dockerName}/tags/${DOCKER_IMAGE_VERSION}/ > /dev/null && echo true || echo false",
+                                        returnStdout: true
+                                    ).trim()
+
+                                    if (exists == "false") {
+                                        sh "docker push ${imageName}"
+                                    } else {
+                                        echo ">> Image ${imageName} already exists, skipping push"
+                                    }
+                                }
+                            }]
                         }
+
+                        sh 'docker logout'
                     }
                 }
             }
@@ -88,10 +112,17 @@ pipeline {
         stage('Update Kubernetes Manifests') {
             steps {
                 script {
-                    def services = ['configserver', 'eurekaserver', 'gatewayserver', 'accounts', 'cards', 'loans']
-                    services.each { service ->
+                    def services = [
+                        'configserver': 'configserver',
+                        'eurekaserver': 'eurekaserver',
+                        'gatewayserver': 'gatewayserver',
+                        'accounts': 'accounts-service',
+                        'cards': 'cards-service',
+                        'loans': 'loans-service'
+                    ]
+                    services.each { dirName, dockerName ->
                         sh """
-                            sed -i 's|juliangiraldo97/${service}:[^ ]*|juliangiraldo97/${service}:${DOCKER_IMAGE_VERSION}|' k8s/${service}/deployment.yaml
+                            sed -i 's|juliangiraldo97/${dockerName}:[^ ]*|juliangiraldo97/${dockerName}:${DOCKER_IMAGE_VERSION}|' k8s/${dirName}/deployment.yaml
                         """
                     }
                 }
@@ -100,36 +131,20 @@ pipeline {
 
         stage('Deploy to GKE') {
             steps {
-                script {
-                    // Authenticate to Google Cloud
-                    sh '''
-                        echo $GCP_CREDENTIALS > gcp-key.json
-                        gcloud auth activate-service-account --key-file=gcp-key.json
-                        gcloud container clusters get-credentials $CLUSTER_NAME --zone $LOCATION --project $PROJECT_ID
-                    '''
+                withCredentials([file(credentialsId: 'gcp-credentials', variable: 'GCP_KEY')]) {
+                    script {
+                        sh '''
+                            gcloud auth activate-service-account --key-file=$GCP_KEY
+                            gcloud container clusters get-credentials $CLUSTER_NAME --zone $LOCATION --project $PROJECT_ID
 
-                    // Apply Kubernetes manifests
-                    sh '''
-                        kubectl apply -f k8s/configmap.yaml
+                            kubectl apply -f k8s/configmap.yaml
 
-                        kubectl apply -f k8s/configserver/deployment.yaml
-                        kubectl apply -f k8s/configserver/service.yaml
-
-                        kubectl apply -f k8s/eurekaserver/deployment.yaml
-                        kubectl apply -f k8s/eurekaserver/service.yaml
-
-                        kubectl apply -f k8s/gatewayserver/deployment.yaml
-                        kubectl apply -f k8s/gatewayserver/service.yaml
-
-                        kubectl apply -f k8s/accounts/deployment.yaml
-                        kubectl apply -f k8s/accounts/service.yaml
-
-                        kubectl apply -f k8s/loans/deployment.yaml
-                        kubectl apply -f k8s/loans/service.yaml
-
-                        kubectl apply -f k8s/cards/deployment.yaml
-                        kubectl apply -f k8s/cards/service.yaml
-                    '''
+                            for service in configserver eurekaserver gatewayserver accounts loans cards; do
+                                kubectl apply -f k8s/$service/deployment.yaml
+                                kubectl apply -f k8s/$service/service.yaml
+                            done
+                        '''
+                    }
                 }
             }
         }
@@ -137,8 +152,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
-            sh 'rm -f gcp-key.json'
+            cleanWs()
         }
     }
 }
