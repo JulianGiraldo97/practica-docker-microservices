@@ -67,6 +67,29 @@ pipeline {
         stage('Build and Push Docker Images') {
             steps {
                 script {
+                    def safeDockerPush = { imageName ->
+                        int maxRetries = 3
+                        int retryDelaySeconds = 10
+                        int attempt = 1
+
+                        while (attempt <= maxRetries) {
+                            echo "🔄 Intento ${attempt} para subir ${imageName}"
+                            def result = sh(script: "docker push ${imageName}", returnStatus: true)
+                            
+                            if (result == 0) {
+                                echo "✅ Imagen ${imageName} subida correctamente en el intento ${attempt}"
+                                break
+                            } else {
+                                echo "⚠️ Falló el push de ${imageName} (intento ${attempt})"
+                                if (attempt == maxRetries) {
+                                    error "❌ No se pudo subir ${imageName} después de ${maxRetries} intentos"
+                                }
+                                sleep(time: retryDelaySeconds, unit: "SECONDS")
+                                attempt++
+                            }
+                        }
+                    }
+
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
 
@@ -85,7 +108,7 @@ pipeline {
                                     def imageName = "jbelzeboss97/${dockerName}:${DOCKER_IMAGE_VERSION}"
 
                                     sh """
-                                        echo ">> Building image ${imageName}"
+                                        echo ">> Construyendo imagen ${imageName}"
                                         docker build -t ${imageName} .
                                     """
 
@@ -95,9 +118,9 @@ pipeline {
                                     ).trim()
 
                                     if (exists == "false") {
-                                        sh "docker push ${imageName}"
+                                        safeDockerPush(imageName)
                                     } else {
-                                        echo ">> Image ${imageName} already exists, skipping push"
+                                        echo ">> La imagen ${imageName} ya existe, omitiendo push"
                                     }
                                 }
                             }]
@@ -108,6 +131,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Update Kubernetes Manifests') {
             steps {
