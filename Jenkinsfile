@@ -93,6 +93,13 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
 
+                        // 👉 Setup buildx (multi-arch)
+                        def builderName = "multiarch-builder"
+                        sh """
+                            docker buildx create --use --name ${builderName} || echo "Builder ya existe"
+                            docker buildx inspect ${builderName} --bootstrap
+                        """
+
                         def services = [
                             'configserver': 'configserver',
                             'eurekaserver': 'eurekaserver',
@@ -108,20 +115,11 @@ pipeline {
                                     def imageName = "jbelzeboss97/${dockerName}:${DOCKER_IMAGE_VERSION}"
 
                                     sh """
-                                        echo ">> Construyendo imagen ${imageName}"
-                                        docker build -t ${imageName} .
+                                        echo ">> Construyendo imagen multi-arch ${imageName}"
+                                        docker buildx build --platform linux/amd64,linux/arm64 -t ${imageName} --push .
                                     """
 
-                                    def exists = sh(
-                                        script: "curl --silent -f -lSL https://hub.docker.com/v2/repositories/jbelzeboss97/${dockerName}/tags/${DOCKER_IMAGE_VERSION}/ > /dev/null && echo true || echo false",
-                                        returnStdout: true
-                                    ).trim()
-
-                                    if (exists == "false") {
-                                        safeDockerPush(imageName)
-                                    } else {
-                                        echo ">> La imagen ${imageName} ya existe, omitiendo push"
-                                    }
+                                    echo ">> Imagen ${imageName} construida y publicada"
                                 }
                             }]
                         }
@@ -131,7 +129,6 @@ pipeline {
                 }
             }
         }
-
 
         stage('Update Kubernetes Manifests') {
             steps {
