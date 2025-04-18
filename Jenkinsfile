@@ -7,7 +7,6 @@ pipeline {
         CLUSTER_NAME = 'microservicios-cluster'
         LOCATION = 'us-central1-a'
         DOCKER_IMAGE_VERSION = "v${BUILD_NUMBER}"
-        DOCKER_BUILDKIT = '1'
     }
 
     stages {
