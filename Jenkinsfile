@@ -92,6 +92,12 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
 
+                        // Activamos buildx (si ya existe, simplemente lo usa)
+                        sh '''
+                            docker buildx create --use --name buildx-builder || docker buildx use buildx-builder
+                            docker buildx inspect --bootstrap
+                        '''
+
                         def services = [
                             'configserver': 'configserver',
                             'eurekaserver': 'eurekaserver',
@@ -107,13 +113,11 @@ pipeline {
                                     def imageName = "jbelzeboss97/${dockerName}:${DOCKER_IMAGE_VERSION}"
 
                                     sh """
-                                        echo ">> Construyendo imagen ${imageName} para linux/amd64"
-                                        docker build --platform linux/amd64 -t ${imageName} .
+                                        echo ">> 🚀 Construyendo imagen ${imageName} para linux/amd64 con buildx"
+                                        docker buildx build --platform linux/amd64 -t ${imageName} --push .
                                     """
 
-                                    safeDockerPush(imageName)
-
-                                    echo ">> Imagen ${imageName} construida y publicada"
+                                    echo ">> ✅ Imagen ${imageName} construida y publicada"
                                 }
                             }]
                         }
