@@ -109,7 +109,7 @@ pipeline {
 
                                     sh """
                                         echo ">> Construyendo imagen ${imageName}"
-                                        docker build -t ${imageName} .
+                                        docker build --platform linux/amd64 -t ${imageName} .
                                     """
 
                                     def exists = sh(
