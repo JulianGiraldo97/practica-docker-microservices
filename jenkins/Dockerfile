@@ -17,20 +17,18 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
     apt-get update && \
     apt-get install -y google-cloud-sdk google-cloud-sdk-gke-gcloud-auth-plugin kubectl
 
-# Instalar Docker
+# Instalar Docker con soporte para buildx
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/debian \
     $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get update && \
-    apt-get install -y docker-ce docker-ce-cli containerd.io
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
 
 # Instalar QEMU para buildx multiplataforma
 RUN apt-get update && apt-get install -y qemu-user-static
 
-# Instalar buildx plugin (ya viene con Docker > 19.03, solo asegurate que esté activo)
-RUN mkdir -p ~/.docker/cli-plugins/ && \
-    curl -SL https://github.com/docker/buildx/releases/latest/download/buildx-v0.12.0.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx && \
-    chmod +x ~/.docker/cli-plugins/docker-buildx
+# Configurar binfmt-support para emulación de arquitecturas
+RUN docker run --privileged --rm tonistiigi/binfmt --install all
 
 # Instalar Maven
 RUN apt-get install -y maven
