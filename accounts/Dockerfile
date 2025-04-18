@@ -1,9 +1,11 @@
-FROM maven:3.8.5-eclipse-temurin-17 AS build
+# Etapa de build con Maven
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY . .
 RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:17-jdk
+# Etapa final con una imagen base que sí soporta amd64
+FROM eclipse-temurin:17.0.10_7-jdk
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
