@@ -24,6 +24,14 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /
     apt-get update && \
     apt-get install -y docker-ce docker-ce-cli containerd.io
 
+# Instalar QEMU para buildx multiplataforma
+RUN apt-get update && apt-get install -y qemu-user-static
+
+# Instalar buildx plugin (ya viene con Docker > 19.03, solo asegurate que esté activo)
+RUN mkdir -p ~/.docker/cli-plugins/ && \
+    curl -SL https://github.com/docker/buildx/releases/latest/download/buildx-v0.12.0.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx && \
+    chmod +x ~/.docker/cli-plugins/docker-buildx
+
 # Instalar Maven
 RUN apt-get install -y maven
 
