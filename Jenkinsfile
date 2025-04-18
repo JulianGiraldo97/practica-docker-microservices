@@ -75,7 +75,7 @@ pipeline {
                         while (attempt <= maxRetries) {
                             echo "🔄 Intento ${attempt} para subir ${imageName}"
                             def result = sh(script: "docker push ${imageName}", returnStatus: true)
-                            
+
                             if (result == 0) {
                                 echo "✅ Imagen ${imageName} subida correctamente en el intento ${attempt}"
                                 break
@@ -93,16 +93,6 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
 
-                        // 👉 Instalar y preparar docker buildx
-                        sh '''
-                            mkdir -p ~/.docker/cli-plugins
-                            curl -sSL https://github.com/docker/buildx/releases/latest/download/buildx-v0.11.2.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
-                            chmod +x ~/.docker/cli-plugins/docker-buildx
-                            docker buildx version
-                            docker buildx create --use --name multiarch-builder || echo "Builder ya existe"
-                            docker buildx inspect --bootstrap
-                        '''
-
                         def services = [
                             'configserver': 'configserver',
                             'eurekaserver': 'eurekaserver',
@@ -118,9 +108,11 @@ pipeline {
                                     def imageName = "jbelzeboss97/${dockerName}:${DOCKER_IMAGE_VERSION}"
 
                                     sh """
-                                        echo ">> Construyendo imagen multi-arch ${imageName}"
-                                        docker buildx build --platform linux/amd64,linux/arm64 -t ${imageName} --push .
+                                        echo ">> Construyendo imagen ${imageName} para linux/amd64"
+                                        docker build --platform linux/amd64 -t ${imageName} .
                                     """
+
+                                    safeDockerPush(imageName)
 
                                     echo ">> Imagen ${imageName} construida y publicada"
                                 }
