@@ -94,8 +94,15 @@ pipeline {
 
                         // Activamos buildx (si ya existe, simplemente lo usa)
                         sh '''
-                            docker buildx create --use --name buildx-builder || docker buildx use buildx-builder
-                            docker buildx inspect --bootstrap
+                            # Verificar si buildx está disponible
+                            if ! docker buildx version &>/dev/null; then
+                                echo "Docker buildx no está disponible, intentando usar Docker multi-plataforma directamente"
+                            else
+                                # Crear o usar un builder existente
+                                docker buildx ls | grep buildx-builder || docker buildx create --name buildx-builder
+                                docker buildx use buildx-builder
+                                docker buildx inspect --bootstrap
+                            fi
                         '''
 
                         def services = [
