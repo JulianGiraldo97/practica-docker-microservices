@@ -7,6 +7,7 @@ pipeline {
         CLUSTER_NAME = 'microservicios-cluster'
         LOCATION = 'us-central1-a'
         DOCKER_IMAGE_VERSION = "v${BUILD_NUMBER}"
+        DOCKER_BUILDKIT = '1'
     }
 
     stages {
@@ -74,7 +75,7 @@ pipeline {
                         while (attempt <= maxRetries) {
                             echo "🔄 Intento ${attempt} para subir ${imageName}"
                             def result = sh(script: "docker push ${imageName}", returnStatus: true)
-
+                            
                             if (result == 0) {
                                 echo "✅ Imagen ${imageName} subida correctamente en el intento ${attempt}"
                                 break
@@ -92,19 +93,6 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
 
-                        // Activamos buildx (si ya existe, simplemente lo usa)
-                        sh '''
-                            # Verificar si buildx está disponible
-                            if ! docker buildx version &>/dev/null; then
-                                echo "Docker buildx no está disponible, intentando usar Docker multi-plataforma directamente"
-                            else
-                                # Crear o usar un builder existente
-                                docker buildx ls | grep buildx-builder || docker buildx create --name buildx-builder
-                                docker buildx use buildx-builder
-                                docker buildx inspect --bootstrap
-                            fi
-                        '''
-
                         def services = [
                             'configserver': 'configserver',
                             'eurekaserver': 'eurekaserver',
@@ -120,11 +108,20 @@ pipeline {
                                     def imageName = "jbelzeboss97/${dockerName}:${DOCKER_IMAGE_VERSION}"
 
                                     sh """
-                                        echo ">> 🚀 Construyendo imagen ${imageName} para linux/amd64 con buildx"
-                                        docker buildx build --platform linux/amd64 -t ${imageName} --push .
+                                        echo ">> Construyendo imagen ${imageName}"
+                                        docker build -t ${imageName} .
                                     """
 
-                                    echo ">> ✅ Imagen ${imageName} construida y publicada"
+                                    def exists = sh(
+                                        script: "curl --silent -f -lSL https://hub.docker.com/v2/repositories/jbelzeboss97/${dockerName}/tags/${DOCKER_IMAGE_VERSION}/ > /dev/null && echo true || echo false",
+                                        returnStdout: true
+                                    ).trim()
+
+                                    if (exists == "false") {
+                                        safeDockerPush(imageName)
+                                    } else {
+                                        echo ">> La imagen ${imageName} ya existe, omitiendo push"
+                                    }
                                 }
                             }]
                         }
@@ -134,6 +131,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Update Kubernetes Manifests') {
             steps {
